@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Comment Sentiment Analyzer</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        :root {
+            --primary-color: #ff6b6b;
+            --secondary-color: #4ecdc4;
+            --accent-color: #45b7d1;
+            --dark-color: #2c3e50;
+            --light-color: #ecf0f1;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .main-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            margin: 2rem auto;
+            padding: 2rem;
+        }
+        
+        .hero-section {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        
+        .hero-title {
+            color: var(--dark-color);
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+        
+        .hero-subtitle {
+            color: #666;
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .input-section {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .form-control {
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 1rem;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(255, 107, 107, 0.25);
+        }
+        
+        .btn-analyze {
+            background: linear-gradient(45deg, var(--primary-color), #ff8e8e);
+            border: none;
+            border-radius: 10px;
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: white;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-analyze:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(255, 107, 107, 0.4);
+        }
+        
+        .results-section {
+            display: none;
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .video-info {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .positive { color: #28a745; }
+        .negative { color: #dc3545; }
+        .total { color: var(--accent-color); }
+        
+        .chart-container {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .comments-section {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .comment-tabs {
+            margin-bottom: 2rem;
+        }
+        
+        .comment-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .comment-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid #dee2e6;
+        }
+        
+        .comment-item.positive {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+        
+        .comment-item.negative {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+        
+        .comment-author {
+            font-weight: 600;
+            color: var(--dark-color);
+            margin-bottom: 0.5rem;
+        }
+        
+        .comment-text {
+            color: #666;
+            line-height: 1.6;
+        }
+        
+        .comment-meta {
+            font-size: 0.9rem;
+            color: #999;
+            margin-top: 0.5rem;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+        
+        .spinner {
+            width: 3rem;
+            height: 3rem;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error-message {
+            display: none;
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .success-message {
+            display: none;
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        @media (max-width: 768px) {
+            .main-container {
+                margin: 1rem;
+                padding: 1rem;
+            }
+            
+            .hero-title {
+                font-size: 2rem;
+            }
+            
+            .stats-cards {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="main-container">
+            <!-- Hero Section -->
+            <div class="hero-section">
+                <h1 class="hero-title">
+                    <i class="fab fa-youtube text-danger me-3"></i>
+                    YouTube Comment Sentiment Analyzer
+                </h1>
+                <p class="hero-subtitle">
+                    Analyze the sentiment of comments on any YouTube video using advanced Machine Learning
+                </p>
+            </div>
+            
+            <!-- Input Section -->
+            <div class="input-section">
+                <h3 class="mb-3">
+                    <i class="fas fa-link me-2"></i>
+                    Enter YouTube Video URL
+                </h3>
+                <form id="analysisForm">
+                    <div class="row">
+                        <div class="col-md-9">
+                            <input type="url" 
+                                   class="form-control" 
+                                   id="videoUrl" 
+                                   placeholder="https://www.youtube.com/watch?v=..." 
+                                   required>
+                        </div>
+                        <div class="col-md-3">
+                            <button type="submit" class="btn btn-analyze w-100">
+                                <i class="fas fa-chart-line me-2"></i>
+                                Analyze
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- Error/Success Messages -->
+            <div class="error-message" id="errorMessage"></div>
+            <div class="success-message" id="successMessage"></div>
+            
+            <!-- Loading Section -->
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <h4>Analyzing comments...</h4>
+                <p>This may take a few moments depending on the number of comments</p>
+            </div>
+            
+            <!-- Results Section -->
+            <div class="results-section" id="resultsSection">
+                <!-- Video Information -->
+                <div class="video-info" id="videoInfo">
+                    <!-- Video info will be populated here -->
+                </div>
+                
+                <!-- Statistics Cards -->
+                <div class="stats-cards" id="statsCards">
+                    <!-- Stats will be populated here -->
+                </div>
+                
+                <!-- Chart -->
+                <div class="chart-container">
+                    <h4 class="mb-3">
+                        <i class="fas fa-chart-pie me-2"></i>
+                        Sentiment Distribution
+                    </h4>
+                    <canvas id="sentimentChart" width="400" height="200"></canvas>
+                </div>
+                
+                <!-- Comments Section -->
+                <div class="comments-section">
+                    <h4 class="mb-3">
+                        <i class="fas fa-comments me-2"></i>
+                        Comment Analysis
+                    </h4>
+                    
+                    <!-- Comment Tabs -->
+                    <ul class="nav nav-tabs comment-tabs" id="commentTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button" role="tab">
+                                <i class="fas fa-list me-2"></i>All Comments
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="positive-tab" data-bs-toggle="tab" data-bs-target="#positive" type="button" role="tab">
+                                <i class="fas fa-thumbs-up me-2 text-success"></i>Positive
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="negative-tab" data-bs-toggle="tab" data-bs-target="#negative" type="button" role="tab">
+                                <i class="fas fa-thumbs-down me-2 text-danger"></i>Negative
+                            </button>
+                        </li>
+                    </ul>
+                    
+                    <!-- Tab Content -->
+                    <div class="tab-content" id="commentTabContent">
+                        <div class="tab-pane fade show active" id="all" role="tabpanel">
+                            <div class="comment-list" id="allComments">
+                                <!-- All comments will be populated here -->
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="positive" role="tabpanel">
+                            <div class="comment-list" id="positiveComments">
+                                <!-- Positive comments will be populated here -->
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="negative" role="tabpanel">
+                            <div class="comment-list" id="negativeComments">
+                                <!-- Negative comments will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        let sentimentChart = null;
+        
+        // Form submission handler
+        document.getElementById('analysisForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const videoUrl = document.getElementById('videoUrl').value.trim();
+            if (!videoUrl) {
+                showError('Please enter a valid YouTube URL');
+                return;
+            }
+            
+            // Show loading
+            showLoading(true);
+            hideMessages();
+            
+            try {
+                const formData = new FormData();
+                formData.append('video_url', videoUrl);
+                
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    displayResults(result);
+                    showSuccess('Analysis completed successfully!');
+                } else {
+                    showError(result.detail || 'An error occurred during analysis');
+                }
+                
+            } catch (error) {
+                showError('Network error: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        });
+        
+        function displayResults(data) {
+            // Display video information
+            const videoInfo = document.getElementById('videoInfo');
+            videoInfo.innerHTML = `
+                <div class="row">
+                    <div class="col-md-8">
+                        <h3>${data.video_info.title}</h3>
+                        <p class="mb-2">
+                            <i class="fas fa-user me-2"></i>
+                            <strong>Channel:</strong> ${data.video_info.channel_title}
+                        </p>
+                        <p class="mb-2">
+                            <i class="fas fa-eye me-2"></i>
+                            <strong>Views:</strong> ${data.video_info.view_count.toLocaleString()}
+                        </p>
+                        <p class="mb-0">
+                            <i class="fas fa-thumbs-up me-2"></i>
+                            <strong>Likes:</strong> ${data.video_info.like_count.toLocaleString()}
+                        </p>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <img src="${data.video_info.thumbnail}" alt="Video thumbnail" class="img-fluid rounded" style="max-width: 200px;">
+                    </div>
+                </div>
+            `;
+            
+            // Display statistics
+            const statsCards = document.getElementById('statsCards');
+            statsCards.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-number total">${data.statistics.total_comments}</div>
+                    <div class="stat-label">Total Comments</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number positive">${data.statistics.positive_count}</div>
+                    <div class="stat-label">Positive</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number negative">${data.statistics.negative_count}</div>
+                    <div class="stat-label">Negative</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" style="color: var(--accent-color);">${data.statistics.positive_percentage}%</div>
+                    <div class="stat-label">Positive Rate</div>
+                </div>
+            `;
+            
+            // Create chart
+            createSentimentChart(data.statistics);
+            
+            // Display comments
+            displayComments(data.comments, 'allComments');
+            displayComments(data.positive_comments, 'positiveComments');
+            displayComments(data.negative_comments, 'negativeComments');
+            
+            // Show results
+            document.getElementById('resultsSection').style.display = 'block';
+            
+            // Scroll to results
+            document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function createSentimentChart(statistics) {
+            const ctx = document.getElementById('sentimentChart').getContext('2d');
+            
+            // Destroy existing chart if it exists
+            if (sentimentChart) {
+                sentimentChart.destroy();
+            }
+            
+            sentimentChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Positive', 'Negative'],
+                    datasets: [{
+                        data: [statistics.positive_count, statistics.negative_count],
+                        backgroundColor: ['#28a745', '#dc3545'],
+                        borderColor: ['#28a745', '#dc3545'],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                font: {
+                                    size: 14
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.parsed;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    return `${label}: ${value} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function displayComments(comments, containerId) {
+            const container = document.getElementById(containerId);
+            
+            if (!comments || comments.length === 0) {
+                container.innerHTML = '<p class="text-muted text-center">No comments found</p>';
+                return;
+            }
+            
+            container.innerHTML = comments.map(comment => `
+                <div class="comment-item ${comment.sentiment === 0 ? 'positive' : 'negative'}">
+                    <div class="comment-author">
+                        <i class="fas fa-user me-2"></i>
+                        ${comment.author}
+                        <span class="badge ${comment.sentiment === 0 ? 'bg-success' : 'bg-danger'} ms-2">
+                            ${comment.sentiment_label}
+                        </span>
+                    </div>
+                    <div class="comment-text">${comment.text}</div>
+                    <div class="comment-meta">
+                        <i class="fas fa-heart me-2"></i>${comment.likes} likes
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+        
+        function showSuccess(message) {
+            const successDiv = document.getElementById('successMessage');
+            successDiv.textContent = message;
+            successDiv.style.display = 'block';
+        }
+        
+        function hideMessages() {
+            document.getElementById('errorMessage').style.display = 'none';
+            document.getElementById('successMessage').style.display = 'none';
+        }
+        
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    </script>
+</body>
+</html>
