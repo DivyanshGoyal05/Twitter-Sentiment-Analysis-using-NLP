@@ -5,6 +5,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import os
+import sys
 import re
 import json
 from typing import List, Dict, Any
@@ -217,5 +218,20 @@ def save_analysis_to_db(video_id: str, video_title: str, total_comments: int,
     conn.commit()
     conn.close()
 
+# Download NLTK data on startup
+def download_nltk_data():
+    """Download required NLTK data"""
+    try:
+        import nltk
+        nltk.download('wordnet', quiet=True)
+        nltk.download('punkt', quiet=True)
+        print("✅ NLTK data downloaded successfully")
+    except Exception as e:
+        print(f"⚠️  Warning: Could not download NLTK data: {e}")
+
+# Download NLTK data on startup
+download_nltk_data()
+
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
